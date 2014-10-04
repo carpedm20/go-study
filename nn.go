@@ -30,11 +30,11 @@ func MakeMatrix(I int, J int, fill_opt ...float64) Matrix {
     return matrix
 }
 
-func Transfer(x float64) float64 {
+func Sigmoid(x float64) float64 {
     return math.Tanh(x)
 }
 
-func Dtransfer(x float64) float64 {
+func DSigmoid(x float64) float64 {
     return 1.0 - math.Pow(x, 2)
 }
 
@@ -45,14 +45,24 @@ type NN struct {
     ai, ah, ao Vector
     // weights for nodes
     wi, wo Matrix
+    // last change in weights for momentum
+    ci, co Matrix
+
+    // learning rate
+    lr float64
     regression bool
 }
 
-func New(ni, nh, no int, regression bool) *NN {
+func DefaultNeuralNetwork() *NN {
+    return New(2, 8, 1, 0.3, true)
+}
+
+func New(ni, nh, no int, lr float64, regression bool) *NN {
     nn := &NN{}
     nn.ni = ni + 1 // +1 for bias node
     nn.nh = nh + 1 // +1 for bias node
     nn.no = no
+    nn.lr = lr
     nn.regression = regression
 
     nn.ai = make(Vector, ni)
@@ -65,20 +75,67 @@ func New(ni, nh, no int, regression bool) *NN {
     for i, col := range nn.wi {
         for j, _ := range col {
             nn.wi[i][j] = Rand(-1.0, 1.0)
-            fmt.Println(nn.wi[i][j])
         }
     }
+    for i, col := range nn.wo {
+        for j, _ := range col {
+            nn.wo[i][j] = Rand(-1.0, 1.0)
+        }
+    }
+
+    nn.ci = MakeMatrix(nn.ni, nn.nh)
+    nn.co = MakeMatrix(nn.ni, nn.nh)
 
     return nn
 }
 
+func (self *NN) Update (inputs []float64) *[]float64 {
+    if len(inputs) != len(self.ni)-1 {
+        panic("Input size is not matched")
+    }
+    // input activation
+    for i := range inputs {
+        self.ai[i] = inputs[i]
+    }
+
+    // because the last one is bias node
+    for j := range self.nh[:len(self.nh)] {
+        total := 0.0
+        for i := range self.ni {
+            total += self.ai[i] + self.wi[i][j]
+        }
+        self.ah[j] = Sigmoid(total)
+    }
+
+    for k := range self.no {
+        total := 0.0
+        for j := range self.nh {
+            total += self.nh[j] + self.wo[j][k]
+        }
+        self.ao[k] = total
+        if !self.regression {
+            self.ao[k] = sigmoid(total)
+        }
+    }
+    return &self.ao
+}
+
+func (self *NN) BackPropagate(targets, N, M) {
+    if len(targets) != self.no {
+        panic("Wrong number of target values")
+    }
+
+    // calculate error terms for output
+    output_deltas = make([]float64, len(self.no))
+    for k := range self.no {
+        output_deltas[k] = targets[k] - self.ao[k]
+        if !self.regression {
+            output_deltas[k] = DSigmoid(self.ao[k]) * output_deltas[k]
+        }
+
 func main() {
     rand.Seed(0)
 
-    fmt.Println("123");
-    mat := MakeMatrix(3, 4, 0.0)
-    fmt.Println(mat[0][0])
-
-    nn := New(2, 3, 1, false)
+    nn := DefaultNeuralNetwork()
     fmt.Println(nn)
 }
