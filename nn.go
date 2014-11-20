@@ -31,7 +31,8 @@ func MakeMatrix(I int, J int, fill_opt ...float64) Matrix {
 }
 
 func Sigmoid(x float64) float64 {
-    return math.Tanh(x)
+    return 1.0/(1.0 + math.Exp(-x))
+    //return math.Tanh(x)
 }
 
 func DSigmoid(x float64) float64 {
@@ -89,7 +90,7 @@ func New(ni, nh, no int, lr float64, regression bool) *NN {
     return nn
 }
 
-func (self *NN) Update (inputs []float64) *[]float64 {
+func (self *NN) FeedForward(inputs []float64) *[]float64 {
     if len(inputs) != len(self.ni)-1 {
         panic("Input size is not matched")
     }
